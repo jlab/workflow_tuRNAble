@@ -1,4 +1,3 @@
-import os
 import sys
 from unittest import TestCase, main
 from phylofiller.converter import easel_table2pd

@@ -194,8 +194,7 @@ def extract_reference_subsequences(fp_reference: str, intervals: pd.DataFrame,
     return res
 
 
-def mutate_sequence(reference : str, position : int, subseq : str,
-                    mutation : str):
+def mutate_sequence(reference: str, position: int, subseq: str, mutation: str):
     """
     Parameters
     ----------
@@ -232,7 +231,6 @@ def mutate_sequence(reference : str, position : int, subseq : str,
     prefix = reference[:position]
     suffix = reference[position+len(subseq):]
 
-    infix_mutation = mutation
     aln_orig = prefix + subseq + \
         ('-' * ((len(mutation) - len(subseq)))) + \
         suffix
@@ -243,6 +241,22 @@ def mutate_sequence(reference : str, position : int, subseq : str,
 
 
 def create_mutated_sequence(candidates: pd.DataFrame, verbose=True):
+    """Obtain aligned original sequence + mutated sequence genomic intervals.
+
+    Parameters
+    ----------
+    candidates : pd.DataFrame
+        List of genomic intervals. Must at least contain columns 'seq from',
+        'seq to', 'strand', 'start', 'reference', 'mutation'. See functions
+            read_mutation_candidates and pyhlofiller's easel_table2pd
+    verbose: bool
+        report progress
+
+    Returns
+    -------
+    pd.DataFrame with same index as candidates with the two columns:
+    'aln_reference' and 'aln_mutation'.
+    """
     res = pd.DataFrame(index=candidates.index,
                        columns=['aln_reference', 'aln_mutation'],
                        dtype=str)
