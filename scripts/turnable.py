@@ -92,7 +92,9 @@ def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
     return hits
 
 
-def overlap_mutations_annotations(mutations: pd.DataFrame, annotations: pd.DataFrame, verbose:bool=True):
+def overlap_mutations_annotations(mutations: pd.DataFrame,
+                                  annotations: pd.DataFrame,
+                                  verbose:bool=True):
     """Subsets mutations to those overlapping any annotation
        (at least with one nucleotide).
 
@@ -138,27 +140,35 @@ def overlap_mutations_annotations(mutations: pd.DataFrame, annotations: pd.DataF
     del overlaps['index']
     return overlaps
 
-# def extract_reference_subsequences(fp_reference, res):
-#     res['reference_sequence'] = ""
-#     # for some reason reading the sequences as DNA fails: .DNA.read(, lowercase=True), i.e. seq lengths is 1
-#     for seq in tqdm(skbio.io.read(fp_reference, format='fasta'), desc="extract reference sub-sequences"):
-#         # genomic positions between slices in skbio: seq[start:end] and tblout from cmsearch have an offset
-#         # of -1, i.e. we obtain the correct sub-sequence via seq[start-1:end] ...
-#
-#         # ... same with Layals de-novo positions: pos = seq[pos-1]
-#         for idx, hit in res[res['#target name'] == seq.metadata['id']].iterrows():
-#             start, end = hit['seq from'], hit['seq to']
-#             if hit['strand'] == '-':
-#                 # reverse complement
-#                 start, end = end, start
-#             subseq = skbio.sequence.DNA(seq[start-1:end], lowercase=True)
-#             if hit['strand'] == '-':
-#                 subseq = subseq.reverse_complement()
-#             res.loc[idx, 'reference_sequence'] = str(subseq)
-#
-#     assert all(res['reference_sequence'].apply(len) == abs(res['seq from'] - res['seq to'])+1)
-#     return res
-#
+
+def extract_reference_subsequences(fp_reference, res, verbose=True):
+    res['reference_sequence'] = ""
+    # for some reason reading the sequences as DNA fails:
+    # .DNA.read(, lowercase=True), i.e. seq lengths is 1
+    for seq in tqdm(skbio.io.read(fp_reference, format='fasta'),
+                    desc="extract reference sub-sequences",
+                    disable=not verbose):
+        # genomic positions between slices in skbio: seq[start:end] and tblout
+        # from cmsearch have an offset of -1, i.e. we obtain the correct
+        # sub-sequence via seq[start-1:end] ...
+
+        # ... same with Layals de-novo positions: pos = seq[pos-1]
+        for idx, hit in res[res['#target name'] == seq.metadata['id']].iterrows():
+            start, end = hit['seq from'], hit['seq to']
+            if hit['strand'] == '-':
+                # reverse complement
+                start, end = end, start
+            subseq = skbio.sequence.DNA(seq[start-1:end], lowercase=True)
+            if hit['strand'] == '-':
+                subseq = subseq.reverse_complement()
+            res.loc[idx, 'reference_sequence'] = str(subseq)
+
+    odd = res[res['reference_sequence'].apply(len) != abs(res['seq from'] - res['seq to']) + 1]
+    if odd.shape[0] > 0:
+        raise ValueError("Length of extracted sub-sequences do not match with positions from cmsearch for: %s" % odd)
+        
+    return res
+
 # def mutate_sequence(reference : str, position : int, subseq : str, mutation : str):
 #     """
 #     Parameters
