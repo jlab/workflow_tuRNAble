@@ -220,12 +220,9 @@ def mutate_sequence(reference: str, position: int, subseq: str, mutation: str):
     if position <= 0:
         raise ValueError("position is < 0")
     if reference[position:position+len(subseq)] != subseq:
-        print(reference)
-        print(subseq)
-        print(position)
         raise ValueError("sub-string '%s' starting at position %i does not "
                          "match your provided subseq '%s'" % (
-                            reference[position-2:position+len(subseq)+2],
+                            reference[position:position+len(subseq)],
                             position,
                             subseq))
 
