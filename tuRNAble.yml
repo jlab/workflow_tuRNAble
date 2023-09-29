@@ -10,3 +10,4 @@ dependencies:
   - scikit-bio
   - tqdm
   - snakemake
+  - biopython
