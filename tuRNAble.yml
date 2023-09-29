@@ -10,5 +10,3 @@ dependencies:
   - scikit-bio
   - tqdm
   - snakemake
-  - pip:
-     - "--editable=git+https://github.com/jlab/phylofiller.git"

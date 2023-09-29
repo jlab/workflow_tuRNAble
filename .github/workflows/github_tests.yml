@@ -38,6 +38,12 @@ jobs:
       shell: bash -el {0}
       run: |
         flake8 scripts/
+    - name: install phylofiller
+      shell: bash -el {0}
+      run: |
+        git clone --branch master https://github.com/jlab/phylofiller.git
+        cd phylofiller
+        python setup.py develop
     - name: run python tests
       shell: bash -el {0}
       run: |
