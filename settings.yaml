@@ -1,0 +1,13 @@
+system:
+  proxy:
+    http: "http://proxy.computational.bio.uni-giessen.de:3128"
+    https: "http://proxy.computational.bio.uni-giessen.de:3128"
+    ftp: "http://proxy.computational.bio.uni-giessen.de:3128"
+
+online_resources:
+  reference_assemblies:
+    homo_sapiens:
+      hg38: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz"
+      hg19: "https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz"
+  rfam:
+    "14.9": "https://ftp.ebi.ac.uk/pub/databases/Rfam/14.9/Rfam.cm.gz"

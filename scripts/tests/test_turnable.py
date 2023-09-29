@@ -55,6 +55,10 @@ class Test_tuRNAble(TestCase):
             read_mutation_candidates(
                 get_data_path("err_multiMut.tsv"))
 
+        with self.assertRaisesRegex(ValueError, 'not contain "PASS"'):
+            read_mutation_candidates(
+                get_data_path("err_noPASS.tsv"))
+
         obsID = read_mutation_candidates(
             get_data_path("denovos_edited3.tsv"),
             only_pointmutations=False)
@@ -104,6 +108,11 @@ class Test_tuRNAble(TestCase):
 
         pd.testing.assert_series_equal(pd.Series(exp), obs)
 
+        with self.assertRaisesRegex(ValueError, 'Length of extracted'):
+            res.iloc[1, 2] = 5000
+            extract_reference_subsequences(get_data_path("ref.fasta.gz"), res,
+                                           verbose=False)
+
     def test_mutate_sequence(self):
         self.assertEqual(mutate_sequence("ACTGGTATGC", 4, "G", "C"),
                          ("ACTGGTATGC", "ACTGCTATGC"))
@@ -113,6 +122,15 @@ class Test_tuRNAble(TestCase):
                          ("ACTGGTATGC", "ACTG---TGC"))
         self.assertEqual(mutate_sequence("ACTGCCTGC", 4, "C", "CCCGTA"),
                          ("ACTGC-----CTGC", "ACTGCCCGTACTGC"))
+        with self.assertRaisesRegex(ValueError,
+                                    'reference is not of type str'):
+            mutate_sequence(["ACTGGTATGC"], 4, "G", "C")
+        with self.assertRaisesRegex(ValueError, 'position is larger'):
+            mutate_sequence("ACTGGTATGC", 4000, "G", "C")
+        with self.assertRaisesRegex(ValueError, 'position is < 0'):
+            mutate_sequence("ACTGGTATGC", -4000, "G", "C")
+        with self.assertRaisesRegex(ValueError, 'does not match your'):
+            mutate_sequence("ACTGGTATGC", 4, "T", "C")
 
     def test_create_mutated_sequence(self):
         res = pd.read_csv(get_data_path("pos_extract.tsv"),

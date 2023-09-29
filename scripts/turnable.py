@@ -47,10 +47,11 @@ def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
     for f in ['reference', 'mutation']:
         hits['%s_length' % f] = hits[f].apply(len)
 
-    if hits['qc'].unique() != ['PASS']:
+    if list(hits['qc'].unique()) != ['PASS']:
         raise ValueError(
             'Fifth column ("qc") of your file does not contain '
-            '"PASS" in rows %s' % ', '.join(hits[hits['qc'] != 'PASS'].index))
+            '"PASS" in rows %s' % ', '.join(
+                map(str, hits[hits['qc'] != 'PASS'].index)))
     del hits['qc']
 
     # preprend "chr" to chromosome names if missing
@@ -219,12 +220,9 @@ def mutate_sequence(reference: str, position: int, subseq: str, mutation: str):
     if position <= 0:
         raise ValueError("position is < 0")
     if reference[position:position+len(subseq)] != subseq:
-        print(reference)
-        print(subseq)
-        print(position)
         raise ValueError("sub-string '%s' starting at position %i does not "
                          "match your provided subseq '%s'" % (
-                            reference[position-2:position+len(subseq)+2],
+                            reference[position:position+len(subseq)],
                             position,
                             subseq))
 
