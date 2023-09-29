@@ -1,0 +1,8 @@
+#target name	seq from	seq to	strand	start	reference	mutation
+Achr16	411	300	-	313	T	G
+Bchr16	300	374	+	359	G	C
+Cchr16	300	374	+	360	G	A
+Dchr19	300	362	+	353	T	G
+Echr4	525	300	-	350	G	GCAGCAGCAGCAGCAACAGCAA
+Fchr7	371	300	-	330	C	G
+Gchr7	371	300	-	332	C	G
