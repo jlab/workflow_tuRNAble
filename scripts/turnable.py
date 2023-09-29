@@ -192,3 +192,77 @@ def extract_reference_subsequences(fp_reference: str, intervals: pd.DataFrame,
                          " positions from cmsearch for: %s" % odd)
 
     return res
+
+
+def mutate_sequence(reference : str, position : int, subseq : str,
+                    mutation : str):
+    """
+    Parameters
+    ----------
+    reference : str
+        The original sequence.
+    position : int
+        The left position at which a mutation occures (zero based)
+    subseq : str
+        The sub-string of the reference affected by the mutation.
+    mutation : str
+        The mutation that shall be integrated at <position> into <reference>
+
+    Returns
+    -------
+    Two alignment rows (i.e. can contain gap chars '-' in both rows) of
+    a) the reference sequence and b) a mutated version.
+    """
+    if not isinstance(reference, str):
+        raise ValueError("reference is not of type str")
+    if position >= len(reference):
+        raise ValueError("position is larger than your reference")
+    if position <= 0:
+        raise ValueError("position is < 0")
+    if reference[position:position+len(subseq)] != subseq:
+        print(reference)
+        print(subseq)
+        print(position)
+        raise ValueError("sub-string '%s' starting at position %i does not "
+                         "match your provided subseq '%s'" % (
+                            reference[position-2:position+len(subseq)+2],
+                            position,
+                            subseq))
+
+    prefix = reference[:position]
+    suffix = reference[position+len(subseq):]
+
+    infix_mutation = mutation
+    aln_orig = prefix + subseq + \
+        ('-' * ((len(mutation) - len(subseq)))) + \
+        suffix
+    aln_mutation = prefix + mutation + \
+        ('-' * ((len(subseq) - len(mutation)))) + \
+        suffix
+    return (aln_orig, aln_mutation)
+
+
+def create_mutated_sequence(candidates: pd.DataFrame, verbose=True):
+    res = pd.DataFrame(index=candidates.index,
+                       columns=['aln_reference', 'aln_mutation'],
+                       dtype=str)
+    for idx, row in tqdm(candidates.iterrows(),
+                         desc="generate mutated sequences",
+                         disable=not verbose):
+        left = row['seq from']
+        seq = skbio.sequence.DNA(row['reference_sequence'], lowercase=True)
+        if row['strand'] == '-':
+            left = row['seq to']
+            seq = seq.reverse_complement()
+        aln_seq, aln_mut = mutate_sequence(str(seq),
+                                           row['start'] - left,
+                                           row['reference'],
+                                           row['mutation'])
+        if row['strand'] == '-':
+            aln_seq = str(skbio.sequence.DNA(aln_seq).reverse_complement())
+            aln_mut = str(skbio.sequence.DNA(aln_mut).reverse_complement())
+
+        res.loc[idx, 'aln_reference'] = aln_seq
+        res.loc[idx, 'aln_mutation'] = aln_mut
+
+    return res

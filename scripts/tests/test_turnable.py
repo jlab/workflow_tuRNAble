@@ -3,25 +3,27 @@ import sys
 from unittest import TestCase, main
 from phylofiller.converter import easel_table2pd
 import pandas as pd
+from skbio.util import get_data_path
 
 sys.path.append("../")
 from scripts.turnable import (read_mutation_candidates,  # noqa: E402
                               overlap_mutations_annotations,
-                              extract_reference_subsequences)
+                              extract_reference_subsequences,
+                              mutate_sequence,
+                              create_mutated_sequence)
 
 
 class Test_tuRNAble(TestCase):
     fp_tmpfile = None
 
     def setUp(self):
-        self.fp_prefix = 'tests/data/'
+        pass
 
     def tearDown(self):
         pass
 
     def test_read_mutation_candidates(self):
-        obs = read_mutation_candidates(
-            os.path.join(self.fp_prefix, "denovos_edited3.tsv"))
+        obs = read_mutation_candidates(get_data_path("denovos_edited3.tsv"))
 
         # test if correct number of mutations are read and filtered
         self.assertEqual(obs.shape, (1093, 7))
@@ -41,30 +43,30 @@ class Test_tuRNAble(TestCase):
 
         with self.assertRaisesRegex(ValueError, "positions are non-negative"):
             read_mutation_candidates(
-                os.path.join(self.fp_prefix, "err_negative.tsv"))
+                get_data_path("err_negative.tsv"))
 
         with self.assertRaisesRegex(ValueError, "non-DNA/RNA nucleotides"):
             read_mutation_candidates(
-                os.path.join(self.fp_prefix, "err_nonXNA_ref.tsv"))
+                get_data_path("err_nonXNA_ref.tsv"))
         with self.assertRaisesRegex(ValueError, "non-DNA/RNA nucleotides"):
             read_mutation_candidates(
-                os.path.join(self.fp_prefix, "err_nonXNA_mut.tsv"))
+                get_data_path("err_nonXNA_mut.tsv"))
 
         with self.assertRaisesRegex(ValueError, "have more then one"):
             read_mutation_candidates(
-                os.path.join(self.fp_prefix, "err_multiMut.tsv"))
+                get_data_path("err_multiMut.tsv"))
 
         obsID = read_mutation_candidates(
-            os.path.join(self.fp_prefix, "denovos_edited3.tsv"),
+            get_data_path("denovos_edited3.tsv"),
             only_pointmutations=False)
         self.assertEqual(obsID.shape, (1208, 7))
         self.assertTrue(obs.shape[0] <= obsID.shape[0])
 
     def test_overlap_mutations_annotations(self):
-        with open(os.path.join(self.fp_prefix, "cmsearch.tab"), "r") as f:
+        with open(get_data_path("cmsearch.tab"), "r") as f:
             annotations = easel_table2pd(f.readlines(), verbose=False)
         mutations = read_mutation_candidates(
-            os.path.join(self.fp_prefix, "denovos_edited3.tsv"),
+            get_data_path("denovos_edited3.tsv"),
             only_pointmutations=False)
 
         obs = overlap_mutations_annotations(mutations, annotations,
@@ -79,7 +81,7 @@ class Test_tuRNAble(TestCase):
         self.assertTrue(len(obs.index.unique()) == obs.shape[0])
 
     def test_extract_reference_subsequences(self):
-        res = pd.read_csv(os.path.join(self.fp_prefix, "pos_extract.tsv"),
+        res = pd.read_csv(get_data_path("pos_extract.tsv"),
                           sep="\t")
 
         exp = [
@@ -99,9 +101,66 @@ class Test_tuRNAble(TestCase):
             'GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCGGCAGCCCCTGACGCCGCTCTTCC'
             'TCTCTCT']
         obs = extract_reference_subsequences(
-            os.path.join(self.fp_prefix, "ref.fasta.gz"), res, verbose=False)
+            get_data_path("ref.fasta.gz"), res, verbose=False)
 
         pd.testing.assert_series_equal(pd.Series(exp), obs)
+
+    def test_mutate_sequence(self):
+        self.assertEqual(mutate_sequence("ACTGGTATGC", 4, "G", "C"),
+                         ("ACTGGTATGC", "ACTGCTATGC"))
+        self.assertEqual(mutate_sequence("ACTGGTATGC", 4, "G", "CCG"),
+                         ("ACTGG--TATGC", "ACTGCCGTATGC"))
+        self.assertEqual(mutate_sequence("ACTGGTATGC", 4, "GTA", ""),
+                         ("ACTGGTATGC", "ACTG---TGC"))
+        self.assertEqual(mutate_sequence("ACTGCCTGC", 4, "C", "CCCGTA"),
+                         ("ACTGC-----CTGC", "ACTGCCCGTACTGC"))
+
+    def test_create_mutated_sequence(self):
+        res = pd.read_csv(get_data_path("pos_extract.tsv"),
+                          sep="\t")
+        res['reference_sequence'] = extract_reference_subsequences(
+            get_data_path("ref.fasta.gz"), res, verbose=False)
+        exp_ref = [
+            "ACTCCTGTAAACAGCTGCTGCCAGCCAGGTGGTGGCCTGGCGGGGACAGCCTAGGCTCGCAGCCT"
+            "CCAGGGGCACCCCCTCACCACCCCCCTGCCCTGACTCACCTTGGCCA",
+            "GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCGGGGCC"
+            "GAGCCCGCGG",
+            "GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCGGGGCC"
+            "GAGCCCGCGG",
+            "GGCCTGGGGGGGAGGGAGTGTGCTCGATCCCACTGGTGGCCAAGCCCCCTCCCTCACCCTTCC",
+            "AATTTGCTGCATCAATTTCACACTACTTCCATATCTAAAGAAACAAAAAAATTACCTGCTGCATA"
+            "TAAGCATCTTGAAGTAGGTGGTGGTGGTGGTGGTGGTGGTGCTGCTGCTGCTGCTGCTGCTGCTG"
+            "CTGTTGCTGTTGCTGCTGCTGCTGTTGCTGTTGCTGCTGCTGCTG--------------------"
+            "-CTGCTGCTGCTGGTGAGGATGACGATGCTGTAAATGGAGTTGCTGTAATCT",
+            "GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCGGCAGCCCCTGACGCCGCTCTTCC"
+            "TCTCTCT",
+            "GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCGGCAGCCCCTGACGCCGCTCTTCC"
+            "TCTCTCT",
+        ]
+        exp_mut = [
+            "ACTCCTGTAAACAGCTGCTGCCAGCCAGGTGGTGGCCTGGCGGGGACAGCCTAGGCTCGCAGCCT"
+            "CCAGGGGCACCCCCTCACCACCCCCCTGCCCTGCCTCACCTTGGCCA",
+            "GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCCGGGCC"
+            "GAGCCCGCGG",
+            "GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCGAGGCC"
+            "GAGCCCGCGG",
+            "GGCCTGGGGGGGAGGGAGTGTGCTCGATCCCACTGGTGGCCAAGCCCCCTCCCGCACCCTTCC",
+            "AATTTGCTGCATCAATTTCACACTACTTCCATATCTAAAGAAACAAAAAAATTACCTGCTGCATA"
+            "TAAGCATCTTGAAGTAGGTGGTGGTGGTGGTGGTGGTGGTGCTGCTGCTGCTGCTGCTGCTGCTG"
+            "CTGTTGCTGTTGCTGCTGCTGCTGTTGCTGTTGCTGCTGCTGCTGTTGCTGTTGCTGCTGCTGCT"
+            "GCTGCTGCTGCTGGTGAGGATGACGATGCTGTAAATGGAGTTGCTGTAATCT",
+            "GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCCGCAGCCCCTGACGCCGCTCTTCC"
+            "TCTCTCT",
+            "GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCCCGGCAGCCCCTGACGCCGCTCTTCC"
+            "TCTCTCT",
+        ]
+        obs = create_mutated_sequence(res, verbose=False)
+        pd.testing.assert_series_equal(
+            pd.Series(exp_ref, name='aln_reference'),
+            obs['aln_reference'])
+        pd.testing.assert_series_equal(
+            pd.Series(exp_mut, name='aln_mutation'),
+            obs['aln_mutation'])
 
 
 if __name__ == '__main__':
