@@ -44,6 +44,7 @@ jobs:
         git clone --branch master https://github.com/jlab/phylofiller.git
         cd phylofiller
         python setup.py develop
+        cd ..
     - name: run python tests
       shell: bash -el {0}
       run: |
