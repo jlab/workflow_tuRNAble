@@ -1,4 +1,5 @@
 import pandas as pd
+from tqdm import tqdm
 
 
 def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
@@ -68,7 +69,9 @@ def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
 
     ALPHABET = ['A','C','G','T','U','-','_']
     for t in ['reference', 'mutation']:
-        nonXNA = hits[~hits[t].apply(lambda s: all(map(lambda n: n in ALPHABET, s.upper())))]
+        nonXNA = hits[~hits[t].apply(lambda s: all(map(
+            lambda n: n in ALPHABET,
+            s.upper())))]
         if nonXNA.shape[0] > 0:
             raise ValueError(
                 "You have non-DNA/RNA nucleotides in your %s column!\n%s" % (
@@ -89,44 +92,52 @@ def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
     return hits
 
 
+def overlap_mutations_annotations(mutations: pd.DataFrame, annotations: pd.DataFrame, verbose:bool=True):
+    """Subsets mutations to those overlapping any annotation
+       (at least with one nucleotide).
 
-# def read_ncRNA_hits(fp_cmsearch, verbose=False, omit_nonexcl=False):
-#     with open(fp_cmsearch, "r") as f:
-#         rfam = easel_table2pd(f.readlines())
-#     if verbose:
-#         print('%i total hits' % rfam.shape[0])
-#
-#     if omit_nonexcl:
-#         # omit all hits with non "inc" == ! entries, i.e. e-value to low
-#         rfam = rfam[rfam['inc'] == '!']
-#         if verbose:
-#             print('%i hits with !' % rfam.shape[0])
-#
-#     return rfam
-#
-# def get_overlap_ncRNA_denovo(fp_ncRNA, fp_denovo, verbose=True):
-#     denovos = read_and_subset_denovos(fp_denovo, only_pointmutations=False)
-#     rfam = read_ncRNA_hits(fp_ncRNA, verbose=verbose)
-#
-#     hits = []
-#     for chrom, gd in tqdm(denovos.groupby('chromosome'), desc='find intersection'):
-#         #if verbose:
-#         #    print(chrom, gd.shape[0])
-#         chr_rfam = rfam[rfam['#target name'] == chrom]
-#
-#         for idx_denovo, d in gd.iterrows():
-#             h = chr_rfam[((chr_rfam['seq from'] <= d['start']) & (d['start'] <= chr_rfam['seq to'])) |
-#                          ((chr_rfam['seq from'] >= d['start']) & (d['start'] >= chr_rfam['seq to'])) |
-#                          ((chr_rfam['seq from'] <= d['start']+d['reference_length']) & (d['start']+d['reference_length'] <= chr_rfam['seq to'])) |
-#                          ((chr_rfam['seq from'] >= d['start']+d['reference_length']) & (d['start']+d['reference_length'] >= chr_rfam['seq to']))].copy()
-#             if h.shape[0] > 0:
-#                 for c in d.index:
-#                     h[c] = d[c]
-#                 hits.append(h)
-#     hits = pd.concat(hits).reset_index()
-#     del hits['index']
-#     return hits
-#
+    Parameters
+    ----------
+    mutations: pd.DataFrame
+        A table that hold information about (de-novo) mutations per row in the
+        format of function 'read_mutation_candidates'.
+    annotations: pd.DataFrame
+        A table parsed from the tabular output of cmsearch, see pyhlofiller's
+        easel_table2pd
+    verbose: bool
+        report progress
+
+    Returns
+    -------
+    Slice of mutations input, with novel index as one annotation can be hit by
+    multiple mutations.
+    """
+    overlaps = []
+    for chrom, gd in tqdm(mutations.groupby('chromosome'),
+                          desc='find intersection', disable=not verbose):
+        chr_rfam = annotations[annotations['#target name'] == chrom]
+
+        for idx_denovo, d in gd.iterrows():
+            h = chr_rfam[((chr_rfam['seq from'] <= d['start']) &
+                          (d['start'] <= chr_rfam['seq to'])) |
+                         ((chr_rfam['seq from'] >= d['start']) &
+                          (d['start'] >= chr_rfam['seq to'])) |
+                         ((chr_rfam['seq from'] <= \
+                           d['start']+d['reference_length']) &
+                          (d['start']+d['reference_length'] <= \
+                           chr_rfam['seq to'])) |
+                         ((chr_rfam['seq from'] >= \
+                           d['start']+d['reference_length']) &
+                          (d['start']+d['reference_length'] >= \
+                           chr_rfam['seq to']))].copy()
+            if h.shape[0] > 0:
+                for c in d.index:
+                    h[c] = d[c]
+                overlaps.append(h)
+    overlaps = pd.concat(overlaps).reset_index()
+    del overlaps['index']
+    return overlaps
+
 # def extract_reference_subsequences(fp_reference, res):
 #     res['reference_sequence'] = ""
 #     # for some reason reading the sequences as DNA fails: .DNA.read(, lowercase=True), i.e. seq lengths is 1

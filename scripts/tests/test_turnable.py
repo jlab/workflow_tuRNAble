@@ -3,7 +3,10 @@ sys.path.append("../")
 import os
 
 from unittest import TestCase, main
-from scripts.turnable import read_mutation_candidates
+from phylofiller.converter import easel_table2pd
+from scripts.turnable import (read_mutation_candidates,
+                              overlap_mutations_annotations)
+
 
 class Test_tuRNAble(TestCase):
     fp_tmpfile = None
@@ -55,6 +58,23 @@ class Test_tuRNAble(TestCase):
         self.assertEqual(obsID.shape, (1208, 7))
         self.assertTrue(obs.shape[0] <= obsID.shape[0])
 
+
+    def test_overlap_mutations_annotations(self):
+        with open(os.path.join(self.fp_prefix, "cmsearch.tab"), "r") as f:
+            annotations = easel_table2pd(f.readlines(), verbose=False)
+        mutations = read_mutation_candidates(
+            os.path.join(self.fp_prefix, "denovos_edited3.tsv"),
+            only_pointmutations=False)
+
+        obs = overlap_mutations_annotations(mutations, annotations,
+                                            verbose=True)
+        self.assertEqual(obs.shape, (7,25))
+        self.assertEqual(list(obs['#target name'].unique()),
+                         ['chr16','chr19','chr4','chr7'])
+        self.assertEqual(list(obs['query name'].unique()),
+                         ["IRES_n-myc","mir-762","mir-1249","isrG","mir-207"])
+
+        self.assertTrue(len(obs.index.unique()) == obs.shape[0])
 
 if __name__ == '__main__':
     main()
