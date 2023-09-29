@@ -47,10 +47,11 @@ def read_mutation_candidates(fp_denovos: str, only_pointmutations=True):
     for f in ['reference', 'mutation']:
         hits['%s_length' % f] = hits[f].apply(len)
 
-    if hits['qc'].unique() != ['PASS']:
+    if list(hits['qc'].unique()) != ['PASS']:
         raise ValueError(
             'Fifth column ("qc") of your file does not contain '
-            '"PASS" in rows %s' % ', '.join(hits[hits['qc'] != 'PASS'].index))
+            '"PASS" in rows %s' % ', '.join(
+                map(str, hits[hits['qc'] != 'PASS'].index)))
     del hits['qc']
 
     # preprend "chr" to chromosome names if missing

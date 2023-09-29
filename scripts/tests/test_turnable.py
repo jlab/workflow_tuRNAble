@@ -55,6 +55,10 @@ class Test_tuRNAble(TestCase):
             read_mutation_candidates(
                 get_data_path("err_multiMut.tsv"))
 
+        with self.assertRaisesRegex(ValueError, 'not contain "PASS"'):
+            read_mutation_candidates(
+                get_data_path("err_noPASS.tsv"))
+
         obsID = read_mutation_candidates(
             get_data_path("denovos_edited3.tsv"),
             only_pointmutations=False)
