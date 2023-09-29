@@ -41,10 +41,12 @@ jobs:
     - name: install phylofiller
       shell: bash -el {0}
       run: |
+        currDir=`pwd`
+        cd /usr/
         git clone --branch master https://github.com/jlab/phylofiller.git
         cd phylofiller
         python setup.py develop
-        cd ..
+        cd $pwd
     - name: run python tests
       shell: bash -el {0}
       run: |
