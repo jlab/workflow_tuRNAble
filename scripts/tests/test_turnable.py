@@ -1,11 +1,13 @@
-import sys
-sys.path.append("../")
 import os
-
+import sys
 from unittest import TestCase, main
 from phylofiller.converter import easel_table2pd
-from scripts.turnable import (read_mutation_candidates,
-                              overlap_mutations_annotations)
+import pandas as pd
+
+sys.path.append("../")
+from scripts.turnable import (read_mutation_candidates,  # noqa: E402
+                              overlap_mutations_annotations,
+                              extract_reference_subsequences)
 
 
 class Test_tuRNAble(TestCase):
@@ -58,7 +60,6 @@ class Test_tuRNAble(TestCase):
         self.assertEqual(obsID.shape, (1208, 7))
         self.assertTrue(obs.shape[0] <= obsID.shape[0])
 
-
     def test_overlap_mutations_annotations(self):
         with open(os.path.join(self.fp_prefix, "cmsearch.tab"), "r") as f:
             annotations = easel_table2pd(f.readlines(), verbose=False)
@@ -67,14 +68,41 @@ class Test_tuRNAble(TestCase):
             only_pointmutations=False)
 
         obs = overlap_mutations_annotations(mutations, annotations,
-                                            verbose=True)
-        self.assertEqual(obs.shape, (7,25))
+                                            verbose=False)
+        self.assertEqual(obs.shape, (7, 25))
         self.assertEqual(list(obs['#target name'].unique()),
-                         ['chr16','chr19','chr4','chr7'])
+                         ['chr16', 'chr19', 'chr4', 'chr7'])
         self.assertEqual(list(obs['query name'].unique()),
-                         ["IRES_n-myc","mir-762","mir-1249","isrG","mir-207"])
+                         ["IRES_n-myc", "mir-762", "mir-1249", "isrG",
+                          "mir-207"])
 
         self.assertTrue(len(obs.index.unique()) == obs.shape[0])
+
+    def test_extract_reference_subsequences(self):
+        res = pd.read_csv(os.path.join(self.fp_prefix, "pos_extract.tsv"),
+                          sep="\t")
+
+        exp = [
+            'ACTCCTGTAAACAGCTGCTGCCAGCCAGGTGGTGGCCTGGCGGGGACAGCCTAGGCTCGCAGCCT'
+            'CCAGGGGCACCCCCTCACCACCCCCCTGCCCTGACTCACCTTGGCCA',
+            'GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCGGGGCC'
+            'GAGCCCGCGG',
+            'GCCCGGCTCCGGGTCTCGGCCCGTACAGTCCGGCCGGCCATGCTGGCGGGGCTGGGGCCGGGGCC'
+            'GAGCCCGCGG',
+            'GGCCTGGGGGGGAGGGAGTGTGCTCGATCCCACTGGTGGCCAAGCCCCCTCCCTCACCCTTCC',
+            'AATTTGCTGCATCAATTTCACACTACTTCCATATCTAAAGAAACAAAAAAATTACCTGCTGCATA'
+            'TAAGCATCTTGAAGTAGGTGGTGGTGGTGGTGGTGGTGGTGCTGCTGCTGCTGCTGCTGCTGCTG'
+            'CTGTTGCTGTTGCTGCTGCTGCTGTTGCTGTTGCTGCTGCTGCTGCTGCTGCTGCTGGTGAGGAT'
+            'GACGATGCTGTAAATGGAGTTGCTGTAATCT',
+            'GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCGGCAGCCCCTGACGCCGCTCTTCC'
+            'TCTCTCT',
+            'GAAGGAGGGGCCGGGCTGGGTCAGGGGCTGGGCGGGGCCGCGGCAGCCCCTGACGCCGCTCTTCC'
+            'TCTCTCT']
+        obs = extract_reference_subsequences(
+            os.path.join(self.fp_prefix, "ref.fasta.gz"), res, verbose=False)
+
+        pd.testing.assert_series_equal(pd.Series(exp), obs)
+
 
 if __name__ == '__main__':
     main()
